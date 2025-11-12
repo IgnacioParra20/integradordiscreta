@@ -2,9 +2,9 @@ import argparse
 import tkinter as tk
 from core import MLP221
 from ui.app import App
-from io.tracer import MarkdownTracer
+from mlpio.tracer import MarkdownTracer
 from trainer.train import train
-from io.export import export_loss_plot, export_pred_table
+from mlpio.export import export_loss_plot, export_pred_table
 
 # opcional: benchmark numpy si existe
 def maybe_numpy_bench(do_numpy: bool, epochs: int, lr: float):

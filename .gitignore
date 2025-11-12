@@ -1,0 +1,69 @@
+# ===========================
+# 🧠 XOR-MLP — Proyecto Python
+# ===========================
+
+# --- Entorno virtual ---
+venv/
+.env/
+.venv/
+env/
+
+# --- Archivos temporales de Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Archivos de salida o ejecución ---
+*.log
+*.tmp
+*.bak
+*.swp
+
+# --- Archivos de tu simulador ---
+trazas.md
+predicciones.md
+loss.png
+
+# --- Datos y salidas intermedias ---
+*.csv
+*.tsv
+*.xlsx
+*.npy
+*.pkl
+
+# --- Compilados y caches ---
+*.so
+*.dll
+*.dylib
+*.egg
+*.egg-info/
+dist/
+build/
+
+# --- Configuración de VS Code ---
+.vscode/
+*.code-workspace
+
+# --- Dependencias descargadas localmente ---
+__pypackages__/
+pip-wheel-metadata/
+site/
+
+# --- Sistema operativo ---
+# Windows
+Thumbs.db
+desktop.ini
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+# Linux
+*~
+
+# --- Archivos de Jupyter (por si después agregás análisis) ---
+.ipynb_checkpoints/
+
+# --- Configuración personal ---
+*.json
+*.ini
+*.cfg

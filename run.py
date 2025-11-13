@@ -59,8 +59,6 @@ def main() -> None:
 
     net = MLP221()
 
-    maybe_numpy_bench(args.numpy, max(args.train, 8000), args.lr)
-
     if args.export:
         tracer = MarkdownTracer("trazas.md")
         losses = train(net, epochs=max(args.train, 3000), lr=args.lr, tracer=tracer)

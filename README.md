@@ -65,8 +65,6 @@ python run.py --train 3000 --lr 0.3
 # Exportar sin abrir GUI
 python run.py --export --train 3000
 
-# Benchmark con NumPy (opcional)
-python run.py --numpy
 \`\`\`
 
 ## 🎮 Guía de uso de la interfaz

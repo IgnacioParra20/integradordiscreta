@@ -34,6 +34,7 @@ class App:
         self.edge_labels = []
 
         self.root.minsize(900, 700)
+        self._resize_job: Optional[str] = None
 
         self._configure_style()
         self._build_ui()
@@ -166,13 +167,16 @@ class App:
         canvas_frame = ttk.Frame(main_container)
         canvas_frame.pack(fill="both", expand=True, pady=(0, 16))
         
-        self.canvas = tk.Canvas(canvas_frame, 
-                               width=800, 
-                               height=480, 
-                               bg=self.colors["bg_medium"],
-                               highlightthickness=2,
-                               highlightbackground=self.colors["bg_light"])
+        self.canvas = tk.Canvas(
+            canvas_frame,
+            width=800,
+            height=480,
+            bg=self.colors["bg_medium"],
+            highlightthickness=2,
+            highlightbackground=self.colors["bg_light"],
+        )
         self.canvas.pack(fill="both", expand=True)
+        self.canvas.bind("<Configure>", self._on_canvas_resize)
         
         controls = ttk.Frame(main_container)
         controls.pack(fill="x", pady=(0, 12))
@@ -612,88 +616,168 @@ class App:
         
         update_step()
 
-    def _draw_graph(self):
+    def _on_canvas_resize(self, event):
+        """Redraw the network when the canvas size changes."""
+        if self._resize_job is not None:
+            self.root.after_cancel(self._resize_job)
+
+        width, height = event.width, event.height
+
+        def redraw():
+            self._resize_job = None
+            self._draw_graph(width, height)
+
+        self._resize_job = self.root.after(80, redraw)
+
+    def _draw_graph(self, width: Optional[int] = None, height: Optional[int] = None):
         """Draw the neural network graph with improved visual design."""
         self.canvas.delete("all")
-        
+
+        if width is None or width <= 1:
+            width = self.canvas.winfo_width()
+        if width <= 1:
+            width = self.canvas.winfo_reqwidth()
+
+        if height is None or height <= 1:
+            height = self.canvas.winfo_height()
+        if height <= 1:
+            height = self.canvas.winfo_reqheight()
+
+        padding_x = max(int(width * 0.12), 70)
+        padding_y = max(int(height * 0.14), 70)
+
+        available_width = max(width - 2 * padding_x, 200)
+        available_height = max(height - 2 * padding_y, 200)
+
+        left_x = padding_x
+        middle_x = padding_x + available_width * 0.5
+        right_x = width - padding_x
+
+        upper_input_y = padding_y + available_height * 0.3
+        lower_input_y = padding_y + available_height * 0.7
+        upper_hidden_y = padding_y + available_height * 0.25
+        lower_hidden_y = padding_y + available_height * 0.75
+        output_y = padding_y + available_height * 0.5
+
         self.pos = {
-            "x1": (120, 140), "x2": (120, 340),
-            "h1": (400, 120),  "h2": (400, 360),
-            "y":  (680, 240)
+            "x1": (left_x, upper_input_y),
+            "x2": (left_x, lower_input_y),
+            "h1": (middle_x, upper_hidden_y),
+            "h2": (middle_x, lower_hidden_y),
+            "y": (right_x, output_y),
         }
-        
+
         self.nodes = {}
-        
+
         self.base_node_colors = {
             "x": "#fbbf24",  # Amber
             "h": "#60a5fa",  # Blue
             "y": "#f87171",  # Red
         }
-        
+
         self.edge_labels = []
         self.edge_items = {}
         self.edge_order = []
-        
+
+        radius = max(24, min(int(min(width, height) * 0.06), 72))
+
         def draw_edge(a, b, text):
             (x1, y1) = self.pos[a]
             (x2, y2) = self.pos[b]
-            e = self.canvas.create_line(x1+35, y1, x2-35, y2, 
-                                       arrow=tk.LAST, 
-                                       fill="#64748b", 
-                                       width=3,
-                                       smooth=True)
+            offset = radius + 3
+            e = self.canvas.create_line(
+                x1 + offset,
+                y1,
+                x2 - offset,
+                y2,
+                arrow=tk.LAST,
+                fill="#64748b",
+                width=3,
+                smooth=True,
+            )
             self.edge_items[(a, b)] = e
             tx = (x1 + x2) / 2
-            ty = (y1 + y2) / 2 - 18
-            
-            bg = self.canvas.create_rectangle(tx-25, ty-10, tx+25, ty+10,
-                                             fill=self.colors["bg_light"],
-                                             outline=self.colors["bg_medium"],
-                                             width=2)
-            t = self.canvas.create_text(tx, ty, 
-                                       text=text, 
-                                       fill=self.colors["text_primary"], 
-                                       font=("Consolas", 10, "bold"))
+            ty = (y1 + y2) / 2 - radius * 0.9
+
+            t = self.canvas.create_text(
+                tx,
+                ty,
+                text=text,
+                fill=self.colors["text_primary"],
+                font=("Consolas", 10, "bold"),
+            )
+            bbox = self.canvas.bbox(t)
+            if bbox:
+                padding = 6
+                bg = self.canvas.create_rectangle(
+                    bbox[0] - padding,
+                    bbox[1] - padding,
+                    bbox[2] + padding,
+                    bbox[3] + padding,
+                    fill=self.colors["bg_light"],
+                    outline=self.colors["bg_medium"],
+                    width=2,
+                )
+                self.canvas.tag_lower(bg, t)
             self.edge_labels.append(t)
             self.edge_order.append((a, b))
-        
+
         draw_edge("x1", "h1", f"{self.net.W1[0][0]:+.2f}")
         draw_edge("x2", "h1", f"{self.net.W1[0][1]:+.2f}")
         draw_edge("x1", "h2", f"{self.net.W1[1][0]:+.2f}")
         draw_edge("x2", "h2", f"{self.net.W1[1][1]:+.2f}")
         draw_edge("h1", "y",  f"{self.net.W2[0][0]:+.2f}")
         draw_edge("h2", "y",  f"{self.net.W2[0][1]:+.2f}")
-        
+
         for name, (cx, cy) in self.pos.items():
-            r = 32
+            r = radius
             key = name[0]
             fill = self.base_node_colors.get(key, "#60a5fa")
-            
+
             # Shadow effect
-            self.canvas.create_oval(cx-r+3, cy-r+3, cx+r+3, cy+r+3,
-                                   fill="#1e293b", outline="")
-            
+            self.canvas.create_oval(
+                cx - r + 3,
+                cy - r + 3,
+                cx + r + 3,
+                cy + r + 3,
+                fill="#1e293b",
+                outline="",
+            )
+
             # Main node
             self.nodes[name] = self.canvas.create_oval(
-                cx - r, cy - r, cx + r, cy + r,
+                cx - r,
+                cy - r,
+                cx + r,
+                cy + r,
                 fill=fill,
                 outline="#f1f5f9",
-                width=3
+                width=3,
             )
-            self.canvas.create_text(cx, cy, 
-                                   text=name, 
-                                   fill="#1e293b", 
-                                   font=("Segoe UI", 12, "bold"))
-        
-        self.lbl_b1 = self.canvas.create_text(400, 50, 
-                                             text=f"b1={self.net.b1}", 
-                                             fill=self.colors["text_secondary"], 
-                                             font=("Consolas", 10))
-        self.lbl_b2 = self.canvas.create_text(680, 50, 
-                                             text=f"b2={self.net.b2}", 
-                                             fill=self.colors["text_secondary"], 
-                                             font=("Consolas", 10))
-        
+            self.canvas.create_text(
+                cx,
+                cy,
+                text=name,
+                fill="#1e293b",
+                font=("Segoe UI", 12, "bold"),
+            )
+
+        bias_y = max(padding_y * 0.55, radius * 1.5)
+        self.lbl_b1 = self.canvas.create_text(
+            middle_x,
+            bias_y,
+            text=f"b1={self.net.b1}",
+            fill=self.colors["text_secondary"],
+            font=("Consolas", 10),
+        )
+        self.lbl_b2 = self.canvas.create_text(
+            right_x,
+            bias_y,
+            text=f"b2={self.net.b2}",
+            fill=self.colors["text_secondary"],
+            font=("Consolas", 10),
+        )
+
         self._refresh_weight_labels()
 
     def _edge_color(self, weight):

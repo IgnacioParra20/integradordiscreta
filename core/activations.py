@@ -2,17 +2,17 @@ import math
 
 def sigmoid(z: float) -> float:
     """
-    Sigmoid activation function with numerical stability.
+    Función de activación sigmoide con estabilidad numérica.
     
-    Uses different formulations depending on sign of z to avoid overflow:
-    - For z >= 0: sigmoid(z) = 1 / (1 + exp(-z))
-    - For z < 0:  sigmoid(z) = exp(z) / (1 + exp(z))
+    Usa distintas formulaciones según el signo de z para evitar desbordamientos:
+    - Para z >= 0: sigmoid(z) = 1 / (1 + exp(-z))
+    - Para z < 0:  sigmoid(z) = exp(z) / (1 + exp(z))
     
-    Args:
-        z: Pre-activation value
+    Parámetros:
+        z: Valor pre-activación
         
-    Returns:
-        Activation value in range (0, 1)
+    Devuelve:
+        Valor de activación en el rango (0, 1)
     """
     if z >= 0:
         ez = math.exp(-z)

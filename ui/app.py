@@ -1,16 +1,23 @@
+"""Interfaz gráfica interactiva para explorar el entrenamiento del MLP XOR."""
+
 import tkinter as tk
-from tkinter import ttk, messagebox
 from threading import Thread
+from tkinter import messagebox, ttk
 from typing import Optional
 
 from core import MLP221
 from data.xor import DATA
-from mlpio.tracer import MarkdownTracer
 from mlpio.export import export_loss_plot, export_pred_table
+from mlpio.tracer import MarkdownTracer
 from trainer.train import train_with_callback
 
+
 class App:
-    def __init__(self, root, net: MLP221):
+    """Orquesta la ventana principal, widgets y lógica de interacción docente."""
+
+    def __init__(self, root: tk.Tk, net: MLP221):
+        """Inicializa controles, estilos y estado de la simulación."""
+
         self.root = root
         self.root.title("MLP XOR 2-2-1 - Simulador Didáctico Interactivo")
         self.root.resizable(True, True)
@@ -20,19 +27,19 @@ class App:
         self.losses = []
         self.is_training = False
         self.training_thread: Optional[Thread] = None
-        
+
         self.option_buttons = {}
         self.edge_order = []
         self.edge_items = {}
         self.edge_labels = []
-        
+
         self.root.minsize(900, 700)
-        
+
         self._configure_style()
         self._build_ui()
         self._draw_graph()
-        self._update_labels([0.0,0.0], 0.0)
-        
+        self._update_labels([0.0, 0.0], 0.0)
+
         self.root.after(500, self._show_welcome_if_first_time)
 
     def _configure_style(self):

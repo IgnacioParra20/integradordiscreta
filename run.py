@@ -14,27 +14,6 @@ from mlpio.tracer import MarkdownTracer
 from trainer.train import train
 from ui.app import App
 
-
-def maybe_numpy_bench(do_numpy: bool, epochs: int, lr: float) -> None:
-    """Ejecuta el benchmark vectorizado en NumPy si el usuario lo solicita.
-
-    Args:
-        do_numpy: ``True`` si debe ejecutarse el benchmark.
-        epochs: Número de épocas para la comparación (se usa un valor alto
-            para ilustrar diferencias de rendimiento).
-        lr: Tasa de aprendizaje empleada durante el benchmark.
-    """
-
-    if not do_numpy:
-        return
-    try:
-        from trainer.benchmark_numpy import numpy_benchmark
-
-        numpy_benchmark(epochs=epochs, lr=lr)
-    except Exception as exc:  # pragma: no cover - feedback puramente informativo
-        print("Benchmark NumPy no disponible:", exc)
-
-
 def main() -> None:
     """Analiza argumentos CLI y coordina entrenamiento, exportación o GUI."""
 

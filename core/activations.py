@@ -24,18 +24,18 @@ def sigmoid(z: float) -> float:
 
 def d_sigmoid_from_a(a: float) -> float:
     """
-    Derivative of sigmoid function given its output value.
-    
-    For sigmoid function σ(z), the derivative is:
+    Derivada de la función sigmoide dada su salida.
+
+    Para la función sigmoide σ(z), la derivada es:
     dσ/dz = σ(z) * (1 - σ(z)) = a * (1 - a)
-    
-    This formulation is more efficient since we typically already
-    have the activation value a from the forward pass.
-    
-    Args:
-        a: Sigmoid activation value (output of sigmoid)
-        
-    Returns:
-        Derivative value
+
+    Esta formulación es más eficiente ya que normalmente ya
+    disponemos del valor de activación a durante la pasada hacia adelante.
+
+    Parámetros:
+        a: Valor de activación sigmoide (salida de la función sigmoide)
+
+    Devuelve:
+        Valor de la derivada
     """
     return a * (1.0 - a)

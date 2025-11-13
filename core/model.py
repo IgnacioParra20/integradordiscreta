@@ -4,37 +4,37 @@ from .losses import bce
 
 class MLP221:
     """
-    Didactic MLP with 2-2-1 architecture for XOR problem.
+    MLP didáctica con arquitectura 2-2-1 para el problema XOR.
     
-    Architecture:
-        - 2 input neurons (x1, x2)
-        - 2 hidden neurons with sigmoid activation
-        - 1 output neuron with sigmoid activation
-        - Binary Cross Entropy (BCE) loss
+    Arquitectura:
+        - 2 neuronas de entrada (x1, x2)
+        - 2 neuronas ocultas con activación sigmoide
+        - 1 neurona de salida con activación sigmoide
+        - Pérdida Binary Cross Entropy (BCE)
         
-    The implementation uses explicit Python lists and loops
-    for educational clarity rather than numpy arrays.
+    La implementación usa listas y bucles de Python explícitos
+    por claridad educativa en lugar de arreglos numpy.
     """
     def __init__(self):
-        # Input → Hidden layer weights and biases
-        # W1[i][j]: weight from input j to hidden neuron i
-        self.W1 = [[ 4.0,  4.0],   # weights to h1
-                   [-4.0, -4.0]]   # weights to h2
-        self.b1 = [-2.0, 6.0]      # biases for h1, h2
+        # Pesos y sesgos de la capa Entrada → Oculta
+        # W1[i][j]: peso desde la entrada j a la neurona oculta i
+        self.W1 = [[ 4.0,  4.0],   # pesos a h1
+                   [-4.0, -4.0]]   # pesos a h2
+        self.b1 = [-2.0, 6.0]      # sesgos para h1, h2
 
-        # Hidden → Output layer weights and biases
-        # W2[0][i]: weight from hidden neuron i to output
-        self.W2 = [[6.0, 6.0]]     # weights from h1, h2 to y
-        self.b2 = [-9.0]           # bias for output y
+        # Pesos y sesgos de la capa Oculta → Salida
+        # W2[0][i]: peso desde la neurona oculta i a la salida
+        self.W2 = [[6.0, 6.0]]     # pesos desde h1, h2 a y
+        self.b2 = [-9.0]           # sesgo para la salida y
 
-        # Forward pass cache (for visualization and backprop)
-        self.x  = [0.0, 0.0]       # input values
-        self.z1 = [0.0, 0.0]       # pre-activation hidden layer
-        self.a1 = [0.0, 0.0]       # post-activation hidden layer
-        self.z2 = [0.0]            # pre-activation output
-        self.yhat = 0.0            # predicted output
+        # Caché de la pasada hacia adelante (para visualización y backprop)
+        self.x  = [0.0, 0.0]       # valores de entrada
+        self.z1 = [0.0, 0.0]       # pre-activación de la capa oculta
+        self.a1 = [0.0, 0.0]       # post-activación de la capa oculta
+        self.z2 = [0.0]            # pre-activación de la salida
+        self.yhat = 0.0            # salida predicha
 
-        # Gradient cache
+        # Caché de gradientes
         self.dW1 = [[0.0, 0.0], [0.0, 0.0]]
         self.db1 = [0.0, 0.0]
         self.dW2 = [[0.0, 0.0]]
@@ -42,17 +42,17 @@ class MLP221:
 
     def forward(self, x: List[float]) -> float:
         """
-        Forward propagation through the network.
+        Propagación hacia adelante a través de la red.
         
         Args:
-            x: Input vector [x1, x2]
+            x: Vector de entrada [x1, x2]
             
         Returns:
-            Network prediction (yhat) after sigmoid activation
+            Predicción de la red (yhat) después de la activación sigmoide
         """
         self.x = x[:]
         
-        # Hidden layer: z1 = W1 @ x + b1, a1 = sigmoid(z1)
+        # Capa oculta: z1 = W1 @ x + b1, a1 = sigmoid(z1)
         for o in range(2):
             z = self.b1[o]
             for i in range(2):
@@ -60,7 +60,7 @@ class MLP221:
             self.z1[o] = z
             self.a1[o] = sigmoid(z)
         
-        # Output layer: z2 = W2 @ a1 + b2, yhat = sigmoid(z2)
+        # Capa de salida: z2 = W2 @ a1 + b2, yhat = sigmoid(z2)
         z = self.b2[0]
         for i in range(2):
             z += self.W2[0][i] * self.a1[i]
@@ -71,31 +71,31 @@ class MLP221:
 
     def backward(self, y: float):
         """
-        Backward propagation to compute gradients.
+        Propagación hacia atrás para calcular gradientes.
         
-        For BCE loss with sigmoid output, the gradient simplifies to:
+        Para la pérdida BCE con salida sigmoide, el gradiente se simplifica a:
         dL/dz2 = yhat - y
         
         Args:
-            y: True label (0 or 1)
+            y: Etiqueta verdadera (0 o 1)
         """
-        # Output layer gradient (BCE + sigmoid derivative)
+        # Gradiente de la capa de salida (BCE + derivada de sigmoide)
         delta2 = self.yhat - y
 
-        # Gradients for output layer weights and bias
+        # Gradientes para pesos y sesgo de la capa de salida
         for i in range(2):
             self.dW2[0][i] = delta2 * self.a1[i]
         self.db2[0] = delta2
 
-        # Backpropagate to hidden layer
+        # Retropropagación a la capa oculta
         delta1 = [0.0, 0.0]
         for i in range(2):
-            # Gradient from output layer
+            # Gradiente proveniente de la capa de salida
             da = self.W2[0][i] * delta2
-            # Apply sigmoid derivative
+            # Aplicar derivada de sigmoide
             delta1[i] = da * d_sigmoid_from_a(self.a1[i])
 
-        # Gradients for hidden layer weights and biases
+        # Gradientes para pesos y sesgos de la capa oculta
         for o in range(2):
             self.db1[o] = delta1[o]
             for i in range(2):
@@ -103,30 +103,30 @@ class MLP221:
 
     def step(self, lr: float):
         """
-        Update weights and biases using computed gradients.
+        Actualiza pesos y sesgos usando los gradientes calculados.
         
         Args:
-            lr: Learning rate for gradient descent
+            lr: Tasa de aprendizaje para descenso de gradiente
         """
-        # Update hidden layer parameters
+        # Actualizar parámetros de la capa oculta
         for o in range(2):
             self.b1[o] -= lr * self.db1[o]
             for i in range(2):
                 self.W1[o][i] -= lr * self.dW1[o][i]
         
-        # Update output layer parameters
+        # Actualizar parámetros de la capa de salida
         self.b2[0] -= lr * self.db2[0]
         for i in range(2):
             self.W2[0][i] -= lr * self.dW2[0][i]
 
     def predict(self, x: List[float]) -> float:
         """
-        Make a prediction for input x.
+        Realiza una predicción para la entrada x.
         
-        Args:
-            x: Input vector [x1, x2]
+        Argumentos:
+            x: Vector de entrada [x1, x2]
             
-        Returns:
-            Network prediction (same as forward)
+        Devuelve:
+            Predicción de la red (igual que forward)
         """
         return self.forward(x)

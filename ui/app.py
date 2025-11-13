@@ -1,22 +1,22 @@
-"""Interfaz gráfica interactiva para explorar el entrenamiento del MLP XOR."""
-
 import tkinter as tk
+from tkinter import ttk, messagebox
 from threading import Thread
-from tkinter import messagebox, ttk
+
 from typing import Optional
 
 from core import MLP221
 from data.xor import DATA
-from mlpio.export import export_loss_plot, export_pred_table
 from mlpio.tracer import MarkdownTracer
+from mlpio.export import export_loss_plot, export_pred_table
+
 from trainer.train import train_with_callback
 
 
 class App:
-    """Orquesta la ventana principal, widgets y lógica de interacción docente."""
+    def __init__(self, root, net: MLP221):
 
-    def __init__(self, root: tk.Tk, net: MLP221):
-        """Inicializa controles, estilos y estado de la simulación."""
+
+
 
         self.root = root
         self.root.title("MLP XOR 2-2-1 - Simulador Didáctico Interactivo")
@@ -27,20 +27,19 @@ class App:
         self.losses = []
         self.is_training = False
         self.training_thread: Optional[Thread] = None
-
+        
         self.option_buttons = {}
         self.edge_order = []
         self.edge_items = {}
         self.edge_labels = []
-
+        
         self.root.minsize(900, 700)
-        self._resize_job: Optional[str] = None
-
+        
         self._configure_style()
         self._build_ui()
         self._draw_graph()
-        self._update_labels([0.0, 0.0], 0.0)
-
+        self._update_labels([0.0,0.0], 0.0)
+        
         self.root.after(500, self._show_welcome_if_first_time)
 
     def _configure_style(self):
@@ -50,7 +49,7 @@ class App:
             style.theme_use("clam")
         except tk.TclError:
             pass
-        
+
         self.colors = {
             "bg_dark": "#1a1d2e",
             "bg_medium": "#252a41",
@@ -64,7 +63,7 @@ class App:
             "text_secondary": "#cbd5e0",
             "text_muted": "#a0aec0",
         }
-        
+
         style.configure("TFrame", background=self.colors["bg_dark"])
         style.configure("TLabel", 
                        background=self.colors["bg_dark"], 
@@ -78,12 +77,12 @@ class App:
                        background=self.colors["bg_dark"], 
                        foreground=self.colors["text_secondary"],
                        font=("Segoe UI", 11))
-        
+
         style.configure("TButton", 
                        padding=(12, 8), 
                        font=("Segoe UI", 10),
                        borderwidth=0)
-        
+
         style.configure("Primary.TButton", 
                        padding=(14, 10), 
                        font=("Segoe UI", 10, "bold"),
@@ -92,7 +91,7 @@ class App:
         style.map("Primary.TButton",
                  background=[("pressed", "#5a67d8"), ("active", "#7c8aed"), ("disabled", "#4a5568")],
                  relief=[("pressed", "sunken"), ("!pressed", "raised")])
-        
+
         style.configure("Success.TButton", 
                        padding=(14, 10), 
                        font=("Segoe UI", 10, "bold"),
@@ -100,7 +99,7 @@ class App:
                        background=self.colors["accent_success"])
         style.map("Success.TButton",
                  background=[("pressed", "#38a169"), ("active", "#68d391"), ("disabled", "#4a5568")])
-        
+
         style.configure("Option.TButton", 
                        padding=(10, 8), 
                        font=("Consolas", 10, "bold"))
@@ -109,12 +108,12 @@ class App:
                            ("pressed", "#ed8936"), 
                            ("active", "#fbd38d")],
                  foreground=[("selected", "#fff"), ("!selected", self.colors["text_primary"])])
-        
+
         style.configure("Help.TButton",
                        padding=(10, 8),
                        font=("Segoe UI", 10),
                        foreground=self.colors["text_primary"])
-        
+
         style.configure("Training.Horizontal.TProgressbar", 
                        background=self.colors["accent_success"], 
                        troughcolor=self.colors["bg_medium"],
@@ -122,7 +121,7 @@ class App:
                        lightcolor="#68d391",
                        darkcolor="#38a169",
                        thickness=20)
-        
+
         style.configure("TEntry",
                        fieldbackground=self.colors["bg_light"],
                        foreground=self.colors["text_primary"],
@@ -132,98 +131,95 @@ class App:
     def _build_ui(self):
         """Build the main user interface with improved layout."""
         self.root.configure(bg=self.colors["bg_dark"])
-        
+
         main_container = ttk.Frame(self.root, padding=20)
         main_container.pack(fill="both", expand=True)
-        
+
         header = ttk.Frame(main_container)
         header.pack(fill="x", pady=(0, 16))
-        
+
         title_frame = ttk.Frame(header)
         title_frame.pack(side="left")
-        
+
         title = ttk.Label(title_frame, 
                          text="Simulador de Red Neuronal XOR", 
                          style="Title.TLabel")
         title.pack(anchor="w")
-        
+
         subtitle = ttk.Label(title_frame, 
                             text="MLP 2-2-1 con BCE y Sigmoide", 
                             style="Subtitle.TLabel")
         subtitle.pack(anchor="w")
-        
+
         btn_help = ttk.Button(header, 
                              text="? Ayuda", 
                              style="Help.TButton",
                              command=self.show_help)
         btn_help.pack(side="right", padx=5)
-        
+
         btn_tutorial = ttk.Button(header, 
                                  text="Tutorial", 
                                  style="Help.TButton",
                                  command=self.show_tutorial)
         btn_tutorial.pack(side="right", padx=5)
-        
+
         canvas_frame = ttk.Frame(main_container)
         canvas_frame.pack(fill="both", expand=True, pady=(0, 16))
-        
-        self.canvas = tk.Canvas(
-            canvas_frame,
-            width=800,
-            height=480,
-            bg=self.colors["bg_medium"],
-            highlightthickness=2,
-            highlightbackground=self.colors["bg_light"],
-        )
+
+        self.canvas = tk.Canvas(canvas_frame, 
+                               width=800, 
+                               height=480, 
+                               bg=self.colors["bg_medium"],
+                               highlightthickness=2,
+                               highlightbackground=self.colors["bg_light"])
         self.canvas.pack(fill="both", expand=True)
-        self.canvas.bind("<Configure>", self._on_canvas_resize)
-        
+
         controls = ttk.Frame(main_container)
         controls.pack(fill="x", pady=(0, 12))
-        
+
         params_frame = ttk.Frame(controls)
         params_frame.pack(fill="x", pady=(0, 12))
-        
+
         params_label = ttk.Label(params_frame, 
                                 text="Parámetros de Entrenamiento:", 
                                 font=("Segoe UI", 10, "bold"),
                                 foreground=self.colors["text_secondary"])
         params_label.pack(anchor="w", pady=(0, 8))
-        
+
         params_inputs = ttk.Frame(params_frame)
         params_inputs.pack(fill="x")
-        
+
         self.var_lr = tk.DoubleVar(value=self.lr)
         self.var_ep = tk.IntVar(value=self.epochs)
-        
+
         lr_container = ttk.Frame(params_inputs)
         lr_container.pack(side="left", padx=(0, 20))
-        
+
         ttk.Label(lr_container, text="Learning Rate (LR):").pack(side="left", padx=(0, 8))
         lr_entry = ttk.Entry(lr_container, textvariable=self.var_lr, width=10)
         lr_entry.pack(side="left")
         self._create_tooltip(lr_entry, "Tasa de aprendizaje (típicamente 0.1 - 1.0)")
-        
+
         ep_container = ttk.Frame(params_inputs)
         ep_container.pack(side="left")
-        
+
         ttk.Label(ep_container, text="Épocas:").pack(side="left", padx=(0, 8))
         ep_entry = ttk.Entry(ep_container, textvariable=self.var_ep, width=10)
         ep_entry.pack(side="left")
         self._create_tooltip(ep_entry, "Número de iteraciones de entrenamiento")
-        
+
         test_frame = ttk.Frame(controls)
         test_frame.pack(fill="x", pady=(0, 12))
-        
+
         test_label = ttk.Label(test_frame, 
                               text="Probar Predicción:", 
                               font=("Segoe UI", 10, "bold"),
                               foreground=self.colors["text_secondary"])
         test_label.pack(anchor="w", pady=(0, 8))
-        
+
         test_buttons = ttk.Frame(test_frame)
         test_buttons.pack(fill="x")
-        
+
         for idx, (text, vector, target, tooltip) in enumerate([
             ("x = [0, 0]", [0.0, 0.0], 0.0, "Entrada: 0 XOR 0 = 0"),
             ("x = [0, 1]", [0.0, 1.0], 1.0, "Entrada: 0 XOR 1 = 1"),
@@ -239,43 +235,43 @@ class App:
             btn.pack(side="left", padx=5)
             self.option_buttons[tuple(vector)] = btn
             self._create_tooltip(btn, tooltip)
-        
+
         actions = ttk.Frame(controls)
         actions.pack(fill="x", pady=(0, 12))
-        
+
         actions_label = ttk.Label(actions, 
                                  text="Acciones:", 
                                  font=("Segoe UI", 10, "bold"),
                                  foreground=self.colors["text_secondary"])
         actions_label.pack(anchor="w", pady=(0, 8))
-        
+
         buttons_row = ttk.Frame(actions)
         buttons_row.pack(fill="x")
-        
+
         self.btn_train = ttk.Button(buttons_row, 
                                     text="Entrenar Red", 
                                     style="Primary.TButton", 
                                     command=self.train_click)
         self.btn_train.pack(side="left", padx=(0, 10))
         self._create_tooltip(self.btn_train, "Entrenar la red con los parámetros configurados")
-        
+
         self.btn_export = ttk.Button(buttons_row, 
                                      text="Exportar Datos", 
                                      style="Success.TButton", 
                                      command=self.export_click)
         self.btn_export.pack(side="left", padx=(0, 10))
         self._create_tooltip(self.btn_export, "Guardar trazas, gráficas y predicciones")
-        
+
         self.btn_reset = ttk.Button(buttons_row, 
                                     text="Reiniciar Pesos", 
                                     style="TButton", 
                                     command=self.reset_weights)
         self.btn_reset.pack(side="left")
         self._create_tooltip(self.btn_reset, "Volver a los pesos iniciales aleatorios")
-        
+
         progress_frame = ttk.Frame(main_container)
         progress_frame.pack(fill="x", pady=(0, 8))
-        
+
         self.progress = ttk.Progressbar(
             progress_frame, 
             orient="horizontal", 
@@ -285,17 +281,17 @@ class App:
         self.progress.pack(fill="x")
         self.progress["maximum"] = 100
         self.progress["value"] = 0
-        
+
         status_frame = ttk.Frame(main_container)
         status_frame.pack(fill="x")
-        
+
         self.lbl_info = ttk.Label(status_frame, 
                                  text="", 
                                  justify="left", 
                                  font=("Consolas", 9),
                                  foreground=self.colors["text_secondary"])
         self.lbl_info.pack(anchor="w", pady=(0, 4))
-        
+
         self.lbl_training = ttk.Label(
             status_frame, 
             text="Listo para entrenar", 
@@ -311,7 +307,7 @@ class App:
             tooltip = tk.Toplevel()
             tooltip.wm_overrideredirect(True)
             tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
-            
+
             label = tk.Label(tooltip, 
                            text=text, 
                            background=self.colors["bg_light"],
@@ -322,14 +318,14 @@ class App:
                            padx=8,
                            pady=4)
             label.pack()
-            
+
             widget.tooltip = tooltip
-        
+
         def on_leave(event):
             if hasattr(widget, 'tooltip'):
                 widget.tooltip.destroy()
                 delattr(widget, 'tooltip')
-        
+
         widget.bind("<Enter>", on_enter)
         widget.bind("<Leave>", on_leave)
 
@@ -351,26 +347,26 @@ class App:
         help_window.geometry("700x600")
         help_window.configure(bg=self.colors["bg_dark"])
         help_window.resizable(False, False)
-        
+
         canvas = tk.Canvas(help_window, bg=self.colors["bg_dark"], highlightthickness=0)
         scrollbar = ttk.Scrollbar(help_window, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
-        
+
         scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
-        
+
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
-        
+
         help_content = [
             ("¿Qué es este simulador?", 
              "Este es un simulador educativo de una Red Neuronal Multicapa (MLP) "
              "diseñada para resolver el problema XOR. La red tiene arquitectura 2-2-1 "
              "(2 entradas, 2 neuronas ocultas, 1 salida) y usa función de activación "
              "sigmoide con pérdida Binary Cross-Entropy (BCE)."),
-            
+
             ("¿Qué es el problema XOR?",
              "XOR (OR Exclusivo) es una función lógica que devuelve 1 solo cuando "
              "las entradas son diferentes:\n"
@@ -380,7 +376,7 @@ class App:
              "• 1 XOR 1 = 0\n\n"
              "Este problema no es linealmente separable, por lo que requiere una "
              "red neuronal con capa oculta."),
-            
+
             ("Componentes de la Interfaz",
              "• Gráfico de Red: Visualización de la arquitectura con nodos y conexiones\n"
              "• Parámetros: Learning Rate y Épocas para controlar el entrenamiento\n"
@@ -390,14 +386,14 @@ class App:
              "• Botón Reiniciar: Vuelve a pesos iniciales aleatorios\n"
              "• Barra de Progreso: Muestra avance del entrenamiento\n"
              "• Panel de Estado: Información detallada de la red"),
-            
+
             ("Cómo Usar el Simulador",
              "1. Configura los parámetros (LR y Épocas)\n"
              "2. Haz clic en 'Entrenar Red'\n"
              "3. Observa el progreso en tiempo real\n"
              "4. Prueba predicciones con los botones x=[0,0], etc.\n"
              "5. Exporta resultados si deseas guardar datos"),
-            
+
             ("Interpretación del Gráfico",
              "• Nodos Amarillos: Neuronas de entrada (x1, x2)\n"
              "• Nodos Azules: Neuronas ocultas (h1, h2)\n"
@@ -407,7 +403,7 @@ class App:
              "  - Azul: Pesos positivos\n"
              "  - Rojo/Naranja: Pesos negativos\n"
              "  - Intensidad: Mayor peso = color más intenso"),
-            
+
             ("Parámetros de Entrenamiento",
              "• Learning Rate (LR): Controla qué tan grandes son los ajustes "
              "de pesos en cada iteración. Valores típicos: 0.1 - 1.0\n"
@@ -415,29 +411,29 @@ class App:
              "  - Muy alto: Puede no converger\n\n"
              "• Épocas: Número de veces que la red ve todos los datos de "
              "entrenamiento. Para XOR, 3000-5000 épocas suelen ser suficientes."),
-            
+
             ("Métricas de Evaluación",
              "• Pérdida (Loss): Mide qué tan equivocadas son las predicciones. "
              "Menor es mejor. BCE está en rango [0, ∞).\n\n"
              "• Precisión (Accuracy): Porcentaje de predicciones correctas. "
              "100% significa que la red resolvió perfectamente el XOR."),
-            
+
             ("Archivos Exportados",
              "• trazas.md: Registro detallado paso a paso del entrenamiento\n"
              "• loss.png: Gráfica de la evolución de la pérdida\n"
              "• predicciones.md: Tabla con predicciones finales para cada entrada"),
         ]
-        
+
         for i, (title, content) in enumerate(help_content):
             section = ttk.Frame(scrollable_frame, padding=15)
             section.pack(fill="x", padx=10, pady=5)
-            
+
             title_label = ttk.Label(section, 
                                    text=title, 
                                    font=("Segoe UI", 11, "bold"),
                                    foreground=self.colors["accent_primary"])
             title_label.pack(anchor="w", pady=(0, 5))
-            
+
             content_label = ttk.Label(section, 
                                      text=content, 
                                      font=("Segoe UI", 9),
@@ -445,10 +441,10 @@ class App:
                                      wraplength=620,
                                      justify="left")
             content_label.pack(anchor="w")
-        
+
         canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         scrollbar.pack(side="right", fill="y")
-        
+
         close_btn = ttk.Button(help_window, 
                               text="Cerrar", 
                               style="Primary.TButton",
@@ -462,7 +458,7 @@ class App:
         tutorial_window.geometry("600x500")
         tutorial_window.configure(bg=self.colors["bg_dark"])
         tutorial_window.resizable(False, False)
-        
+
         steps = [
             {
                 "title": "Paso 1: Entender el Problema XOR",
@@ -547,19 +543,19 @@ class App:
                 "image": None
             }
         ]
-        
+
         current_step = [0]  # Use list for mutability in nested function
-        
+
         content_frame = ttk.Frame(tutorial_window, padding=20)
         content_frame.pack(fill="both", expand=True)
-        
+
         title_label = ttk.Label(content_frame, 
                                text="", 
                                font=("Segoe UI", 13, "bold"),
                                foreground=self.colors["accent_primary"],
                                wraplength=550)
         title_label.pack(anchor="w", pady=(0, 15))
-        
+
         content_label = ttk.Label(content_frame, 
                                  text="", 
                                  font=("Segoe UI", 10),
@@ -567,104 +563,63 @@ class App:
                                  wraplength=550,
                                  justify="left")
         content_label.pack(anchor="w", fill="both", expand=True)
-        
+
         progress_label = ttk.Label(content_frame,
                                   text="",
                                   font=("Segoe UI", 9),
                                   foreground=self.colors["text_muted"])
         progress_label.pack(pady=(15, 0))
-        
+
         def update_step():
             step = steps[current_step[0]]
             title_label.config(text=step["title"])
             content_label.config(text=step["content"])
             progress_label.config(text=f"Paso {current_step[0] + 1} de {len(steps)}")
-            
+
             btn_prev.config(state="normal" if current_step[0] > 0 else "disabled")
             btn_next.config(text="Siguiente" if current_step[0] < len(steps) - 1 else "Finalizar")
-        
+
         def next_step():
             if current_step[0] < len(steps) - 1:
                 current_step[0] += 1
                 update_step()
             else:
                 tutorial_window.destroy()
-        
+
         def prev_step():
             if current_step[0] > 0:
                 current_step[0] -= 1
                 update_step()
-        
+
         nav_frame = ttk.Frame(tutorial_window)
         nav_frame.pack(fill="x", padx=20, pady=(0, 20))
-        
+
         btn_prev = ttk.Button(nav_frame, 
                              text="Anterior", 
                              command=prev_step)
         btn_prev.pack(side="left")
-        
+
         btn_skip = ttk.Button(nav_frame, 
                              text="Saltar Tutorial", 
                              command=tutorial_window.destroy)
         btn_skip.pack(side="left", padx=10)
-        
+
         btn_next = ttk.Button(nav_frame, 
                              text="Siguiente", 
                              style="Primary.TButton",
                              command=next_step)
         btn_next.pack(side="right")
-        
+
         update_step()
 
-    def _on_canvas_resize(self, event):
-        """Redraw the network when the canvas size changes."""
-        if self._resize_job is not None:
-            self.root.after_cancel(self._resize_job)
-
-        width, height = event.width, event.height
-
-        def redraw():
-            self._resize_job = None
-            self._draw_graph(width, height)
-
-        self._resize_job = self.root.after(80, redraw)
-
-    def _draw_graph(self, width: Optional[int] = None, height: Optional[int] = None):
+    def _draw_graph(self):
         """Draw the neural network graph with improved visual design."""
         self.canvas.delete("all")
 
-        if width is None or width <= 1:
-            width = self.canvas.winfo_width()
-        if width <= 1:
-            width = self.canvas.winfo_reqwidth()
-
-        if height is None or height <= 1:
-            height = self.canvas.winfo_height()
-        if height <= 1:
-            height = self.canvas.winfo_reqheight()
-
-        padding_x = max(int(width * 0.12), 70)
-        padding_y = max(int(height * 0.14), 70)
-
-        available_width = max(width - 2 * padding_x, 200)
-        available_height = max(height - 2 * padding_y, 200)
-
-        left_x = padding_x
-        middle_x = padding_x + available_width * 0.5
-        right_x = width - padding_x
-
-        upper_input_y = padding_y + available_height * 0.3
-        lower_input_y = padding_y + available_height * 0.7
-        upper_hidden_y = padding_y + available_height * 0.25
-        lower_hidden_y = padding_y + available_height * 0.75
-        output_y = padding_y + available_height * 0.5
-
         self.pos = {
-            "x1": (left_x, upper_input_y),
-            "x2": (left_x, lower_input_y),
-            "h1": (middle_x, upper_hidden_y),
-            "h2": (middle_x, lower_hidden_y),
-            "y": (right_x, output_y),
+            "x1": (120, 140), "x2": (120, 340),
+            "h1": (400, 120),  "h2": (400, 360),
+            "y":  (680, 240)
         }
 
         self.nodes = {}
@@ -679,46 +634,26 @@ class App:
         self.edge_items = {}
         self.edge_order = []
 
-        radius = max(24, min(int(min(width, height) * 0.06), 72))
-
         def draw_edge(a, b, text):
             (x1, y1) = self.pos[a]
             (x2, y2) = self.pos[b]
-            offset = radius + 3
-            e = self.canvas.create_line(
-                x1 + offset,
-                y1,
-                x2 - offset,
-                y2,
-                arrow=tk.LAST,
-                fill="#64748b",
-                width=3,
-                smooth=True,
-            )
+            e = self.canvas.create_line(x1+35, y1, x2-35, y2, 
+                                       arrow=tk.LAST, 
+                                       fill="#64748b", 
+                                       width=3,
+                                       smooth=True)
             self.edge_items[(a, b)] = e
             tx = (x1 + x2) / 2
-            ty = (y1 + y2) / 2 - radius * 0.9
+            ty = (y1 + y2) / 2 - 18
 
-            t = self.canvas.create_text(
-                tx,
-                ty,
-                text=text,
-                fill=self.colors["text_primary"],
-                font=("Consolas", 10, "bold"),
-            )
-            bbox = self.canvas.bbox(t)
-            if bbox:
-                padding = 6
-                bg = self.canvas.create_rectangle(
-                    bbox[0] - padding,
-                    bbox[1] - padding,
-                    bbox[2] + padding,
-                    bbox[3] + padding,
-                    fill=self.colors["bg_light"],
-                    outline=self.colors["bg_medium"],
-                    width=2,
-                )
-                self.canvas.tag_lower(bg, t)
+            bg = self.canvas.create_rectangle(tx-25, ty-10, tx+25, ty+10,
+                                             fill=self.colors["bg_light"],
+                                             outline=self.colors["bg_medium"],
+                                             width=2)
+            t = self.canvas.create_text(tx, ty, 
+                                       text=text, 
+                                       fill=self.colors["text_primary"], 
+                                       font=("Consolas", 10, "bold"))
             self.edge_labels.append(t)
             self.edge_order.append((a, b))
 
@@ -730,53 +665,34 @@ class App:
         draw_edge("h2", "y",  f"{self.net.W2[0][1]:+.2f}")
 
         for name, (cx, cy) in self.pos.items():
-            r = radius
+            r = 32
             key = name[0]
             fill = self.base_node_colors.get(key, "#60a5fa")
 
             # Shadow effect
-            self.canvas.create_oval(
-                cx - r + 3,
-                cy - r + 3,
-                cx + r + 3,
-                cy + r + 3,
-                fill="#1e293b",
-                outline="",
-            )
+            self.canvas.create_oval(cx-r+3, cy-r+3, cx+r+3, cy+r+3,
+                                   fill="#1e293b", outline="")
 
             # Main node
             self.nodes[name] = self.canvas.create_oval(
-                cx - r,
-                cy - r,
-                cx + r,
-                cy + r,
+                cx - r, cy - r, cx + r, cy + r,
                 fill=fill,
                 outline="#f1f5f9",
-                width=3,
+                width=3
             )
-            self.canvas.create_text(
-                cx,
-                cy,
-                text=name,
-                fill="#1e293b",
-                font=("Segoe UI", 12, "bold"),
-            )
+            self.canvas.create_text(cx, cy, 
+                                   text=name, 
+                                   fill="#1e293b", 
+                                   font=("Segoe UI", 12, "bold"))
 
-        bias_y = max(padding_y * 0.55, radius * 1.5)
-        self.lbl_b1 = self.canvas.create_text(
-            middle_x,
-            bias_y,
-            text=f"b1={self.net.b1}",
-            fill=self.colors["text_secondary"],
-            font=("Consolas", 10),
-        )
-        self.lbl_b2 = self.canvas.create_text(
-            right_x,
-            bias_y,
-            text=f"b2={self.net.b2}",
-            fill=self.colors["text_secondary"],
-            font=("Consolas", 10),
-        )
+        self.lbl_b1 = self.canvas.create_text(400, 50, 
+                                             text=f"b1={self.net.b1}", 
+                                             fill=self.colors["text_secondary"], 
+                                             font=("Consolas", 10))
+        self.lbl_b2 = self.canvas.create_text(680, 50, 
+                                             text=f"b2={self.net.b2}", 
+                                             fill=self.colors["text_secondary"], 
+                                             font=("Consolas", 10))
 
         self._refresh_weight_labels()
 
@@ -862,13 +778,13 @@ class App:
         yhat = self.net.forward(x)
         self._update_labels(x, y)
         self._reset_node_styles()
-        
+
         for btn in self.option_buttons.values():
             btn.state(["!selected"])
         sel_btn = self.option_buttons.get(tuple(x))
         if sel_btn:
             sel_btn.state(["selected"])
-        
+
         for idx, name in enumerate(["x1", "x2"]):
             if x[idx] >= 0.5:
                 self.canvas.itemconfigure(
@@ -947,7 +863,7 @@ class App:
             )
             export_loss_plot(self.losses, "loss.png")
             export_pred_table(self.net, "predicciones.md")
-            
+
             self.root.after(0, self._training_complete)
         except Exception as e:
             self.root.after(0, lambda: self._training_error(str(e)))
@@ -1005,20 +921,20 @@ class App:
         if self.is_training:
             messagebox.showwarning("Advertencia", "Ya hay un entrenamiento en progreso")
             return
-            
+
         try:
             self.lr = float(self.var_lr.get())
             self.epochs = int(self.var_ep.get())
-            
+
             if self.lr <= 0 or self.lr > 10:
                 raise ValueError("Learning rate debe estar entre 0 y 10")
             if self.epochs <= 0 or self.epochs > 100000:
                 raise ValueError("Épocas debe estar entre 1 y 100000")
-                
+
         except ValueError as e:
             messagebox.showerror("Error de validación", str(e))
             return
-        
+
         self.is_training = True
         self._disable_controls()
         self.progress["value"] = 0
@@ -1026,7 +942,7 @@ class App:
             text="Iniciando entrenamiento...",
             foreground=self.colors["accent_warning"]
         )
-        
+
         self.training_thread = Thread(target=self._run_training_thread, daemon=True)
         self.training_thread.start()
 
@@ -1051,7 +967,7 @@ class App:
         if self.is_training:
             messagebox.showwarning("Advertencia", "No se puede reiniciar durante el entrenamiento")
             return
-            
+
         self.net = MLP221()
         self.losses = []
         self.progress["value"] = 0
